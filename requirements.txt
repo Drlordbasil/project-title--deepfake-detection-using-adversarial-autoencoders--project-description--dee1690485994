@@ -1,0 +1,7 @@
+The package requirements for the given Python program are:
+
+- os
+- cv2
+- numpy
+- tensorflow
+- sklearn
