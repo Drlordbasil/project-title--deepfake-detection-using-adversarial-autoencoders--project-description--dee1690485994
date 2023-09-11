@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Dense, Flatten, Conv2D, Conv1D, MaxPooling2D, MaxPooling1D, UpSampling2D, UpSampling1D, Add
+from tensorflow.keras.layers import Input, Dense, Flatten, Conv2D, MaxPooling2D, UpSampling2D
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from tensorflow.keras.datasets import mnist
@@ -24,20 +24,6 @@ def preprocess_frames(frames):
     for frame in frames:
         # Extract relevant features from video frames (e.g., facial landmarks, motion vectors)
         feature = extract_features(frame)
-        features.append(feature)
-    return np.array(features)
-
-
-def extract_features(frame):
-    # Implement your custom feature extraction process here
-    return feature
-
-
-def preprocess_audio(audio):
-    features = []
-    for audio_clip in audio:
-        # Extract relevant features from audio components (e.g., spectrograms)
-        feature = extract_features(audio_clip)
         features.append(feature)
     return np.array(features)
 
@@ -82,29 +68,23 @@ def train_autoencoder(real_videos, deepfake_videos):
     # Preprocess real and deepfake videos
     real_frames = preprocess_frames(real_videos)
     deepfake_frames = preprocess_frames(deepfake_videos)
-
     # Split training and validation data
     x_train, x_val, _, _ = train_test_split(np.concatenate((real_frames, deepfake_frames)), np.zeros(
         len(real_frames) + len(deepfake_frames)), test_size=0.2)
-
     # Normalize input data
     x_train = x_train / 255.0
     x_val = x_val / 255.0
-
     # Build and compile the autoencoder model
     input_shape = x_train[0].shape
     autoencoder = build_autoencoder(input_shape)
     autoencoder.compile(optimizer='adam', loss='mse')
-
     # Train the autoencoder
     autoencoder.fit(x_train, x_train, validation_data=(
         x_val, x_val), epochs=10, batch_size=32)
-
     # Extract encoder and decoder models
     encoder = Model(inputs=autoencoder.input,
                     outputs=autoencoder.get_layer(index=1).output)
     decoder = Model(inputs=autoencoder.input, outputs=autoencoder.output)
-
     return encoder, decoder
 
 
@@ -112,7 +92,6 @@ def train_discriminator(encoder, real_frames, deepfake_frames):
     # Preprocess real and deepfake frames
     real_encoded = encoder.predict(preprocess_frames(real_frames))
     deepfake_encoded = encoder.predict(preprocess_frames(deepfake_frames))
-
     # Create labels for real and deepfake frames
     labels = np.concatenate(
         (np.ones(len(real_encoded)), np.zeros(len(deepfake_encoded))))
@@ -143,28 +122,22 @@ def evaluate_model(encoder, discriminator, test_real_videos, test_deepfake_video
     # Preprocess test videos
     test_real_frames = preprocess_frames(test_real_videos)
     test_deepfake_frames = preprocess_frames(test_deepfake_videos)
-
     # Encode test frames
     test_real_encoded = encoder.predict(test_real_frames)
     test_deepfake_encoded = encoder.predict(test_deepfake_frames)
-
     # Create labels for test videos
     test_real_labels = np.ones(len(test_real_encoded))
     test_deepfake_labels = np.zeros(len(test_deepfake_encoded))
-
     # Combine test data and labels
     x_test = np.concatenate((test_real_encoded, test_deepfake_encoded))
     y_test = np.concatenate((test_real_labels, test_deepfake_labels))
-
     # Evaluate the model
     y_pred = discriminator.predict(x_test)
     y_pred_labels = (y_pred > 0.5).astype(int)
-
     accuracy = accuracy_score(y_test, y_pred_labels)
     precision = precision_score(y_test, y_pred_labels)
     recall = recall_score(y_test, y_pred_labels)
     f1 = f1_score(y_test, y_pred_labels)
-
     return accuracy, precision, recall, f1
 
 # Step 5: Deployment
